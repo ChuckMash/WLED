@@ -6,7 +6,6 @@
 
 
 // TODO
-//  Pin allocation
 //  Improve memory use with PROGMEM 
 //  Secret Knock Mode
 //  Millis rollover?
@@ -16,7 +15,7 @@
 class smackThatUsermod : public Usermod {
   private:
 
-    int8_t smackSensorPin;  // pin to be used by sensor
+    int8_t sensorPin;       // pin to be used by sensor
     int smackDelay;         // time after last smack to end session and apply presets
     int bounceDelay;        // cooldown time after each new smack is first detected, helps with sensor bounce and timing
     bool invertSensorHL;    // invert HIGH/LOW for sensor
@@ -38,13 +37,23 @@ class smackThatUsermod : public Usermod {
 
   public:
 
+    void setup(){
+      if (sensorPin < 0 || !pinManager.allocatePin(sensorPin, false, PinOwner::UM_Unspecified)){
+        sensorPin = -1;
+        return;
+      }
+
+    }
+
+
+
     void loop() {
 
       // If not enabled, don't do anything
       if (!enabled) return;
 
       // Read from sensor
-      smackReading = digitalRead(smackSensorPin);
+      smackReading = digitalRead(sensorPin);
 
       // Use Tripwire Mode if enabled
       if (enableTripwire) tripwireLoop();
@@ -117,7 +126,7 @@ class smackThatUsermod : public Usermod {
       top["Smack Timeout (ms)"]        = smackDelay;
       top["Bounce Delay (ms)"]         = bounceDelay;
       top["Serial Output Level (0-2)"] = serialOutputLevel;
-      top["Pin"]                       = smackSensorPin;
+      top["Pin"]                       = sensorPin;
       top["Invert"]                    = invertSensorHL;
 
       for (int i = 1; i <= MAX_SMACKS; i++) {
@@ -142,7 +151,7 @@ class smackThatUsermod : public Usermod {
       configComplete &= getJsonValue(top["Smack Timeout (ms)"],        smackDelay,        250);
       configComplete &= getJsonValue(top["Bounce Delay (ms)"],         bounceDelay,       150);
       configComplete &= getJsonValue(top["Serial Output Level (0-2)"], serialOutputLevel, 0);
-      configComplete &= getJsonValue(top["Pin"],                       smackSensorPin,    -1);
+      configComplete &= getJsonValue(top["Pin"],                       sensorPin,    -1);
       configComplete &= getJsonValue(top["Invert"],                    invertSensorHL,    false);
 
       for (int i = 1; i <= MAX_SMACKS; i++) {

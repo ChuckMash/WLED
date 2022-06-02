@@ -55,3 +55,20 @@ Demos
 [![Smack That: Tripwire Mode configured for semi-sound reactive](https://img.youtube.com/vi/cBBUQdeMTcY/0.jpg)](https://www.youtube.com/watch?v=cBBUQdeMTcY)
 
 [Tripwire Mode (configured for semi-sound reactive)](https://www.youtube.com/watch?v=cBBUQdeMTcY)
+
+
+
+PlatformIO Example
+---
+```
+[env:d1_mini]
+board = d1_mini
+platform = ${common.platform_wled_default}
+platform_packages = ${common.platform_packages}
+upload_speed = 115200
+board_build.ldscript = ${common.ldscript_4m1m}
+build_unflags = ${common.build_unflags}
+build_flags = ${common.build_flags_esp8266} -D USERMOD_SMACK_THAT
+lib_deps = ${esp8266.lib_deps}
+monitor_filters = esp8266_exception_decoder
+```
