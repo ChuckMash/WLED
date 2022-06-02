@@ -14,6 +14,7 @@ Settings
   * Acts as a cooldown after a smack is detected. If unsure, leave as is.
 * Serial Output Level
   * Sends Smack That updates over serial connection as JSON.
+  * Useful for debugging and determining required timing for Smack Timeout and Bounce Delay
   * 0: Disabled
   * 1: Send Smack That update when preset is applied.
     * Example: {"smacks":3,"preset":1}
@@ -27,7 +28,7 @@ Settings
 * N Smacks(s)
   * Specify a preset to load when N smacks(s) are detected
 * Use Tripwire Mode
-  * Overrides default behavoir with Tripwire Mode.
+  * Overrides default behavior with Tripwire Mode.
   * On sensor activation, applies Tripped Preset.
   * After timeout (resets on each sensor activation) applies Untripped Preset.
 * Tripwire Timeout (ms)
