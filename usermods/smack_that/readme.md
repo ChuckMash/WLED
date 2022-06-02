@@ -41,7 +41,7 @@ Supported Sensors
 ---
 * FC-04 Sound Sensor Module
 * SW-420 Vibration Sensor Module (inverted)
-* Any other sensor that pulls LOW when activated (or HIGH if Invert is enabled) 
+* Any other sensor that pulls LOW when activated (or HIGH if Invert is enabled)
 
 
 Demos
@@ -55,3 +55,5 @@ Demos
 [![Smack That: Tripwire Mode configured for semi-sound reactive](https://img.youtube.com/vi/cBBUQdeMTcY/0.jpg)](https://www.youtube.com/watch?v=cBBUQdeMTcY)
 
 [Tripwire Mode (configured for semi-sound reactive)](https://www.youtube.com/watch?v=cBBUQdeMTcY)
+
+test
