@@ -55,5 +55,3 @@ Demos
 [![Smack That: Tripwire Mode configured for semi-sound reactive](https://img.youtube.com/vi/cBBUQdeMTcY/0.jpg)](https://www.youtube.com/watch?v=cBBUQdeMTcY)
 
 [Tripwire Mode (configured for semi-sound reactive)](https://www.youtube.com/watch?v=cBBUQdeMTcY)
-
-test
