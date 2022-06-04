@@ -15,23 +15,23 @@
 class smackThatUsermod : public Usermod {
   private:
 
-    int8_t sensorPin;       // pin to be used by sensor
-    int smackDelay;         // time after last smack to end session and apply presets
-    int bounceDelay;        // cooldown time after each new smack is first detected, helps with sensor bounce and timing
-    bool invertSensorHL;    // invert HIGH/LOW for sensor
-    bool enabled;           // enable / disable Smack That Usermod
-    int serialOutputLevel;  // 0: disabled, 1: data when preset applied, 2: data on smacks with preset if applied. 99 raw feed from sensor
-    bool enableTripwire;    // enable / disable Tripwire mode
-    int tripwireTimeout;    // Timeout from last Tripwire detection, if exceeded second Tripwire preset will be applied
-    int tripwirePresets[2]; // holds the trip and untrip presets used in Tripwire mode
+    int8_t sensorPin;           //  pin to be used by sensor
+    int    activationTimeout;   //  time after most recent sensor activation to end session and apply presets
+    int    bounceDelay;         //  cooldown time after each sensor activation is first detected, helps with sensor bounce and timing
+    bool   invertSensorHL;      //  invert HIGH/LOW for sensor
+    bool   enabled;             //  enable / disable Smack That Usermod
+    int    serialOutputLevel;   //  0: disabled, 1: data when preset applied, 2: data on smacks with preset if applied. 99: raw feed from sensor
+    bool   enableTripwire;      //  enable / disable Tripwire mode
+    int    tripwireTimeout;     //  Timeout from last Tripwire detection, if exceeded second Tripwire preset will be applied
+    int    tripwirePresets[2];  //  holds the trip and untrip presets used in Tripwire mode
 
-    bool smack              = false; // Is there a smack being detected right now
-    int smackCount          = 0;     // The number of smacks in this session, resets after smackDelay timeout
-    int smackReading        = 0;     // Holds the reading from the sensor
-    unsigned long lastSmack = 0;     // millis time of last smack detected
-    int sensorHL            = LOW;   // default trigger setting for sensor, can be inverted with "Invert" in usermod setting page    
-    int loadPreset          = 0;     // holds preset loaded last
-    int smacksToPreset[MAX_SMACKS];  // Stores smacks to preset
+    bool sensorActive        = false;  //  Is the sensor active right now
+    int  activationCount     = 0;      //  The number of sensor activations in this session, resets after activationTimeout
+    int  sensorReading       = 0;      //  Holds the reading from the sensor
+    unsigned long lastActive = 0;      //  millis time of most recent sensor activation detected
+    int  sensorHL            = LOW;    //  default trigger setting for sensor, can be inverted with "Invert" in usermod setting page    
+    int  loadPreset          = 0;      //  holds preset loaded last
+    int  smacksToPreset[MAX_SMACKS];   //  Stores sensor activation count per session to preset lookup
 
 
 
@@ -42,7 +42,6 @@ class smackThatUsermod : public Usermod {
         sensorPin = -1;
         return;
       }
-
     }
 
 
@@ -53,11 +52,11 @@ class smackThatUsermod : public Usermod {
       if (!enabled) return;
 
       // Read from sensor
-      smackReading = digitalRead(sensorPin);
+      sensorReading = digitalRead(sensorPin);
 
       // If secret serial output level, send out raw feed from sensor
       if(serialOutputLevel == 99){
-        Serial.println(smackReading);
+        Serial.println(sensorReading);
       }
 
       // Use Tripwire Mode if enabled
@@ -70,26 +69,26 @@ class smackThatUsermod : public Usermod {
 
 
     void clapperLoop() {
-      // If new smack detected and not already detecting an ongoing smack
-      if (smackReading == (invertSensorHL?!sensorHL:sensorHL) && !smack && millis() - lastSmack >= bounceDelay){
-        smackCount++;
-        lastSmack = millis();
-        smack = true;
+      // If new sensor activation detected
+      if (sensorReading == (invertSensorHL?!sensorHL:sensorHL) && !sensorActive && millis() - lastActive >= bounceDelay){
+        activationCount++;
+        lastActive = millis();
+        sensorActive = true;
       }
 
-      // No smack detected
-      else if (smackReading == (invertSensorHL?sensorHL:!sensorHL)){
+      // Sensor is inactive
+      else if (sensorReading == (invertSensorHL?sensorHL:!sensorHL)){
 
-        // If a previous smack has ended
-        if (smack) {
-          smack = false;
+        // If previous sensor activation has ended
+        if (sensorActive) {
+          sensorActive = false;
         }
 
         else{
-          // Check if smack session has ended
-          if (smackCount > 0 && millis() - lastSmack >= smackDelay){
+          // Check if session has ended
+          if (activationCount > 0 && millis() - lastActive >= activationTimeout){
             for (int i=1; i<=MAX_SMACKS; i++){        
-              if (smackCount == i && smacksToPreset[i] > 0){
+              if (activationCount == i && smacksToPreset[i] > 0){
                 applyPreset(smacksToPreset[i]);
                 loadPreset = smacksToPreset[i];
                 break;
@@ -97,10 +96,10 @@ class smackThatUsermod : public Usermod {
             }
            
            if (serialOutputLevel > 0){
-            serialOutput(smackCount, loadPreset);
+            serialOutput(activationCount, loadPreset);
            }
 
-           smackCount = 0;
+           activationCount = 0;
            loadPreset = 0;
           }
         }
@@ -110,8 +109,8 @@ class smackThatUsermod : public Usermod {
 
 
     void tripwireLoop(){
-      if (smackReading == (invertSensorHL?!sensorHL:sensorHL) && millis() - lastSmack >= bounceDelay){
-        lastSmack = millis();
+      if (sensorReading == (invertSensorHL?!sensorHL:sensorHL) && millis() - lastActive >= bounceDelay){
+        lastActive = millis();
 
         if (currentPreset != tripwirePresets[0]){
           applyPreset(tripwirePresets[0]);
@@ -127,7 +126,7 @@ class smackThatUsermod : public Usermod {
 
       }
 
-      else if (smackReading == (invertSensorHL?sensorHL:!sensorHL) && currentPreset != tripwirePresets[1] && millis() - lastSmack >= tripwireTimeout){
+      else if (sensorReading == (invertSensorHL?sensorHL:!sensorHL) && currentPreset != tripwirePresets[1] && millis() - lastActive >= tripwireTimeout){
         applyPreset(tripwirePresets[1]);
         if(serialOutputLevel > 0){
           tripwireSerialOutput(false, tripwirePresets[1]);
@@ -142,7 +141,7 @@ class smackThatUsermod : public Usermod {
       JsonObject top = root.createNestedObject("Smack That Usermod");
 
       top["Enable"]                    = enabled;
-      top["Smack Timeout (ms)"]        = smackDelay;
+      top["Smack Timeout (ms)"]        = activationTimeout;
       top["Bounce Delay (ms)"]         = bounceDelay;
       top["Serial Output Level (0-2)"] = serialOutputLevel;
       top["Pin"]                       = sensorPin;
@@ -167,10 +166,10 @@ class smackThatUsermod : public Usermod {
       bool configComplete = !top.isNull();
 
       configComplete &= getJsonValue(top["Enable"],                    enabled,           true);
-      configComplete &= getJsonValue(top["Smack Timeout (ms)"],        smackDelay,        250);
+      configComplete &= getJsonValue(top["Smack Timeout (ms)"],        activationTimeout, 250);
       configComplete &= getJsonValue(top["Bounce Delay (ms)"],         bounceDelay,       150);
       configComplete &= getJsonValue(top["Serial Output Level (0-2)"], serialOutputLevel, 0);
-      configComplete &= getJsonValue(top["Pin"],                       sensorPin,    -1);
+      configComplete &= getJsonValue(top["Pin"],                       sensorPin,         -1);
       configComplete &= getJsonValue(top["Invert"],                    invertSensorHL,    false);
 
       for (int i = 1; i <= MAX_SMACKS; i++) {
@@ -200,12 +199,10 @@ class smackThatUsermod : public Usermod {
       if (serialOutputLevel>=2 || (serialOutputLevel==1 && preset>0)){
         Serial.write("{\"smacks\":");
         Serial.print(smacks);
-        
         if (preset>0){
           Serial.write(",\"preset\":");
           Serial.print(preset);
         }
-        
         Serial.println("}");
       }
     }
@@ -229,7 +226,6 @@ class smackThatUsermod : public Usermod {
 
 
 
-    //void setup() {}
     //void connected() {}
     //void addToJsonInfo(JsonObject& root){}
     //void addToJsonState(JsonObject& root){}
