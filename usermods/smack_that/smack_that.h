@@ -20,7 +20,7 @@ class smackThatUsermod : public Usermod {
     int bounceDelay;        // cooldown time after each new smack is first detected, helps with sensor bounce and timing
     bool invertSensorHL;    // invert HIGH/LOW for sensor
     bool enabled;           // enable / disable Smack That Usermod
-    int serialOutputLevel;  // 0: disabled, 1: data when preset applied, 2: data on smacks with preset if applied
+    int serialOutputLevel;  // 0: disabled, 1: data when preset applied, 2: data on smacks with preset if applied. 99 raw feed from sensor
     bool enableTripwire;    // enable / disable Tripwire mode
     int tripwireTimeout;    // Timeout from last Tripwire detection, if exceeded second Tripwire preset will be applied
     int tripwirePresets[2]; // holds the trip and untrip presets used in Tripwire mode
@@ -54,6 +54,11 @@ class smackThatUsermod : public Usermod {
 
       // Read from sensor
       smackReading = digitalRead(sensorPin);
+
+      // If secret serial output level, send out raw feed from sensor
+      if(serialOutputLevel == 99){
+        Serial.println(smackReading);
+      }
 
       // Use Tripwire Mode if enabled
       if (enableTripwire) tripwireLoop();
@@ -106,13 +111,27 @@ class smackThatUsermod : public Usermod {
 
     void tripwireLoop(){
       if (smackReading == (invertSensorHL?!sensorHL:sensorHL) && millis() - lastSmack >= bounceDelay){
+        lastSmack = millis();
+
         if (currentPreset != tripwirePresets[0]){
           applyPreset(tripwirePresets[0]);
-          lastSmack = millis();
+          if(serialOutputLevel > 0){
+            tripwireSerialOutput(true, tripwirePresets[0]);
+          }
         }
+
+        // If serial output level is 2+, and not applying a tripped/untripped preset, send tripped message
+        else if (serialOutputLevel > 1){
+          tripwireSerialOutput(true, 0);
+        }
+
       }
+
       else if (smackReading == (invertSensorHL?sensorHL:!sensorHL) && currentPreset != tripwirePresets[1] && millis() - lastSmack >= tripwireTimeout){
         applyPreset(tripwirePresets[1]);
+        if(serialOutputLevel > 0){
+          tripwireSerialOutput(false, tripwirePresets[1]);
+        }
       }
     }
 
@@ -190,6 +209,19 @@ class smackThatUsermod : public Usermod {
         Serial.println("}");
       }
     }
+
+
+
+  // Send JSON blob with Tripwire events
+  void tripwireSerialOutput(bool tripped, int preset){
+    Serial.write("{\"tripped\":");
+    Serial.print(tripped);
+    if (preset > 0){
+      Serial.write(",\"preset\":");
+      Serial.print(preset);
+    }
+    Serial.println("}");
+  }
 
 
 
