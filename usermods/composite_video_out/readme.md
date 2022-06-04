@@ -43,3 +43,12 @@ board_build.partitions = ${esp32.default_partitions}
 POC
 
 https://www.youtube.com/watch?v=tYJ_7i1ME2g
+
+
+---
+References
+
+https://github.com/Roger-random/ESP_8_BIT_composite
+
+https://learn.adafruit.com/adafruit-gfx-graphics-library
+
