@@ -40,8 +40,9 @@ Settings
 
 Supported Sensors
 ---
-* FC-04 Sound Sensor Module
-* SW-420 Vibration Sensor Module (inverted)
+* **FC-04 Sound Sensor Module. Recommended.**
+* **SW-420 Vibration Sensor Module. Recommended.**
+* SW-18010P Spring Vibration Sensor (not in module). Works, but not recommended.
 * Any other sensor that pulls LOW when activated (or HIGH if Invert is enabled)
 
 
