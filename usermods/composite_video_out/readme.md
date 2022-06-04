@@ -37,3 +37,9 @@ lib_deps = ${esp32.lib_deps}
 monitor_filters = esp32_exception_decoder
 board_build.partitions = ${esp32.default_partitions}
 ```
+
+
+---
+POC
+
+https://www.youtube.com/watch?v=tYJ_7i1ME2g
