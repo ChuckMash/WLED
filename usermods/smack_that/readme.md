@@ -17,10 +17,13 @@ Settings
   * Useful for debugging and determining required timing for Smack Timeout and Bounce Delay
   * 0: Disabled
   * 1: Send Smack That update when preset is applied.
-    * Example: {"smacks":3,"preset":1}
+    * Example: ```{"smacks":3,"preset":1}```
+    * Example: ```{"tripped":1,"preset":1}``` (Tripwire Mode)
+    * Example: ```{"tripped":0,"preset":2}``` (Tripwire Mode)
   * 2: Send Smack That update even when preset is not applied.
-    * Example: {"smacks":2}
-    * Example: {"smacks":3,"preset":1}
+    * Example: ```{"smacks":2}```
+    * Example: ```{"smacks":3,"preset":1}```
+    * Example: ```{"tripped":1}``` (Tripwire Mode)
 * Pin
   * Pin to read from for sensor
 * Invert
@@ -40,10 +43,12 @@ Settings
 
 Supported Sensors
 ---
-* **FC-04 Sound Sensor Module. Recommended.**
-* **SW-420 Vibration Sensor Module. Recommended.**
+* **FC-04 Sound Sensor Module. (Recommended)**
+* **SW-420 Vibration Sensor Module. (Recommended)**
+* **SR602 PIR Motion Sensor Module. (Recommended, Tripwire Mode)**
+* MAX4466 MAX4466 Microphone Amplifier Module.
 * SW-18010P Spring Vibration Sensor (not in module). Works, but not recommended.
-* Any other sensor that pulls LOW when activated (or HIGH if Invert is enabled)
+* Any other sensor that pulls LOW when activated. (or HIGH if Invert is enabled)
 
 
 Demos
