@@ -128,6 +128,11 @@
 #include "../usermods/Si7021_MQTT_HA/usermod_si7021_mqtt_ha.h"
 #endif
 
+#ifdef USERMOD_COMPOSITE_VIDEO_OUT
+#include "../usermods/composite_video_out/composite_video_out.h"
+#endif
+
+
 void registerUsermods()
 {
 /*
@@ -242,5 +247,9 @@ void registerUsermods()
   
   #ifdef USERMOD_SI7021_MQTT_HA
   usermods.add(new Si7021_MQTT_HA());
+  #endif
+
+  #ifdef USERMOD_COMPOSITE_VIDEO_OUT
+  usermods.add(new compositeVideoOut());
   #endif
 }
