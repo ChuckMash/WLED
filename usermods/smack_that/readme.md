@@ -59,9 +59,18 @@ Demos
 
 ---
 
+[![Smack That: Tripwire Mode with 5 Second Timeout and Serial Data](https://img.youtube.com/vi/7et_k5QZZco/0.jpg)](https://www.youtube.com/watch?v=7et_k5QZZco)
+
+[Tripwire Mode with 5 Second Timeout and Serial Data](https://www.youtube.com/watch?v=7et_k5QZZco)
+
+---
+
 [![Smack That: Tripwire Mode configured for semi-sound reactive](https://img.youtube.com/vi/cBBUQdeMTcY/0.jpg)](https://www.youtube.com/watch?v=cBBUQdeMTcY)
 
 [Tripwire Mode (configured for semi-sound reactive)](https://www.youtube.com/watch?v=cBBUQdeMTcY)
+
+
+
 
 
 
