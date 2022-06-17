@@ -4,11 +4,15 @@
 
 #define MAX_SMACKS 10
 
+// Extra Features, Enabled with Serial Output Level
+//   * 99 - Will send a constant invert-adjusted reading from sensor
 
 // TODO
 //  Improve memory use with PROGMEM 
 //  Secret Knock Mode
 //  Millis rollover?
+//  optimize definitions
+//  check current preset to new preset    vs    just set the preset, even if same
 
 
 
@@ -21,16 +25,14 @@ class smackThatUsermod : public Usermod {
     bool   invertSensorHL;      //  invert HIGH/LOW for sensor
     bool   enabled;             //  enable / disable Smack That Usermod
     int    serialOutputLevel;   //  0: disabled, 1: data when preset applied, 2: data on smacks with preset if applied. 99: raw feed from sensor
-    bool   enableTripwire;      //  enable / disable Tripwire mode
     int    tripwireTimeout;     //  Timeout from last Tripwire detection, if exceeded second Tripwire preset will be applied
     int    tripwirePresets[2];  //  holds the trip and untrip presets used in Tripwire mode
 
-    bool sensorActive        = false;  //  Is the sensor active right now
+    bool sensorIsActive      = false;  //  Holds the invert-adjusted reading from the sensor
+    bool sensorWasActive     = false;  //  Is the sensor active right now
+    bool tripped             = false;  //  Is Tripwire tripped or untripped
     int  activationCount     = 0;      //  The number of sensor activations in this session, resets after activationTimeout
-    int  sensorReading       = 0;      //  Holds the reading from the sensor
     unsigned long lastActive = 0;      //  millis time of most recent sensor activation detected
-    int  sensorHL            = LOW;    //  default trigger setting for sensor, can be inverted with "Invert" in usermod setting page    
-    int  loadPreset          = 0;      //  holds preset loaded last
     int  smacksToPreset[MAX_SMACKS];   //  Stores sensor activation count per session to preset lookup
 
 
@@ -48,91 +50,72 @@ class smackThatUsermod : public Usermod {
 
     void loop() {
 
-      // If not enabled, don't do anything
+      // If Smack That is not enabled, don't do anything
       if (!enabled) return;
 
-      // Read from sensor
-      sensorReading = digitalRead(sensorPin);
+      // Read from sensor, adjust for invert setting
+      sensorIsActive = invertSensorHL?digitalRead(sensorPin):!digitalRead(sensorPin);
 
-      // If secret serial output level, send out raw feed from sensor
+      //Extra Feature: Send out invert-adjusted feed from sensor over serial
       if(serialOutputLevel == 99){
-        Serial.println(sensorReading);
+        Serial.println(sensorIsActive);
       }
 
-      // Use Tripwire Mode if enabled
-      if (enableTripwire) tripwireLoop();
-
-      // else default to Clapper mode
-      else clapperLoop();
-    }
-
-
-
-    void clapperLoop() {
-      // If new sensor activation detected
-      if (sensorReading == (invertSensorHL?!sensorHL:sensorHL) && !sensorActive && millis() - lastActive >= bounceDelay){
+      // New sensor activation detected
+      if (sensorIsActive && !sensorWasActive && millis() - lastActive >= bounceDelay){
         activationCount++;
         lastActive = millis();
-        sensorActive = true;
+        sensorWasActive = true;
       }
 
       // Sensor is inactive
-      else if (sensorReading == (invertSensorHL?sensorHL:!sensorHL)){
+      else if (!sensorIsActive){
 
         // If previous sensor activation has ended
-        if (sensorActive) {
-          sensorActive = false;
+        if (sensorWasActive) {
+          sensorWasActive = false;
         }
-
+        
         else{
+
           // Check if session has ended
           if (activationCount > 0 && millis() - lastActive >= activationTimeout){
-            for (int i=1; i<=MAX_SMACKS; i++){        
-              if (activationCount == i && smacksToPreset[i] > 0){
-                applyPreset(smacksToPreset[i]);
-                loadPreset = smacksToPreset[i];
-                break;
-              }
+
+            // Check if number of activations matches any preset settings and apply
+            if (activationCount <= MAX_SMACKS && smacksToPreset[activationCount] > 0){
+              applyPreset(smacksToPreset[activationCount]);
+              serialOutput(activationCount, smacksToPreset[activationCount]);
             }
-           
-           if (serialOutputLevel > 0){
-            serialOutput(activationCount, loadPreset);
-           }
+            else{
+              serialOutput(activationCount, 0);
+            }
 
            activationCount = 0;
-           loadPreset = 0;
           }
         }
       }
-    } // end clapperLoop()
 
-
-
-    void tripwireLoop(){
-      if (sensorReading == (invertSensorHL?!sensorHL:sensorHL) && millis() - lastActive >= bounceDelay){
-        lastActive = millis();
-
-        if (currentPreset != tripwirePresets[0]){
-          applyPreset(tripwirePresets[0]);
+      // Check Tripwire Preset settings and apply
+      if (sensorIsActive && !tripped){
+        tripped = true;
+        if (applyPreset(tripwirePresets[0])){
           if(serialOutputLevel > 0){
             tripwireSerialOutput(true, tripwirePresets[0]);
           }
         }
-
-        // If serial output level is 2+, and not applying a tripped/untripped preset, send tripped message
-        else if (serialOutputLevel > 1){
-          tripwireSerialOutput(true, 0);
-        }
-
       }
 
-      else if (sensorReading == (invertSensorHL?sensorHL:!sensorHL) && currentPreset != tripwirePresets[1] && millis() - lastActive >= tripwireTimeout){
-        applyPreset(tripwirePresets[1]);
-        if(serialOutputLevel > 0){
-          tripwireSerialOutput(false, tripwirePresets[1]);
+      // Check Tripwire Reset and timeout settings and apply
+      else if(!sensorIsActive && tripped && millis() - lastActive >= tripwireTimeout){
+        tripped = false;
+        if(applyPreset(tripwirePresets[1])){
+          if(serialOutputLevel > 0){
+            tripwireSerialOutput(false, tripwirePresets[1]);
+          }
         }
       }
-    }
+
+    } // end loop
 
 
 
@@ -151,10 +134,9 @@ class smackThatUsermod : public Usermod {
         top[getKey(i)] = smacksToPreset[i];
       }
 
-      top["Use Tripwire Mode"]     = enableTripwire;
+      top["Tripwire Preset"]       = tripwirePresets[0];
+      top["Tripwire Reset"]        = tripwirePresets[1];
       top["Tripwire Timeout (ms)"] = tripwireTimeout;
-      top["Tripped Preset"]        = tripwirePresets[0];
-      top["Untripped Preset"]      = tripwirePresets[1];
     }
 
 
@@ -176,10 +158,9 @@ class smackThatUsermod : public Usermod {
         configComplete &= getJsonValue(top[getKey(i)], smacksToPreset[i], 0);
         }
 
-      configComplete &= getJsonValue(top["Use Tripwire Mode"],     enableTripwire,     false);
+      configComplete &= getJsonValue(top["Tripwire Preset"],       tripwirePresets[0], 0);
+      configComplete &= getJsonValue(top["Tripwire Reset"],        tripwirePresets[1], 0);
       configComplete &= getJsonValue(top["Tripwire Timeout (ms)"], tripwireTimeout,    60000); // default to 1 minute
-      configComplete &= getJsonValue(top["Tripped Preset"],        tripwirePresets[0], 0);
-      configComplete &= getJsonValue(top["Untripped Preset"],      tripwirePresets[1], 0);
 
       return configComplete;
     }
@@ -196,7 +177,7 @@ class smackThatUsermod : public Usermod {
 
     // Send JSON blobs with smack and preset data out over serial if enabled
     void serialOutput(int smacks, int preset){
-      if (serialOutputLevel>=2 || (serialOutputLevel==1 && preset>0)){
+      if (serialOutputLevel >= 2 || (serialOutputLevel == 1 && preset > 0)){
         Serial.write("{\"smacks\":");
         Serial.print(smacks);
         if (preset>0){

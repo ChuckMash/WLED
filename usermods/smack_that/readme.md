@@ -48,6 +48,7 @@ Supported Sensors
 * **SR602 PIR Motion Sensor Module. (Recommended, Tripwire Mode)**
 * MAX4466 Microphone Amplifier Module.
 * SW-18010P Spring Vibration Sensor (not in module). Works, but not recommended.
+* HC-SR312 PIR Sensor Module. (Tripwire Mode)
 * Any other sensor that pulls LOW when activated. (or HIGH if Invert is enabled)
 
 
