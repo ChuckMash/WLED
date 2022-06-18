@@ -11,29 +11,31 @@
 //  Improve memory use with PROGMEM 
 //  Secret Knock Mode
 //  Millis rollover?
-//  optimize definitions
 //  check current preset to new preset    vs    just set the preset, even if same
+// tuck tripwire presets into the end of smacks to preset?
 
 
 
 class smackThatUsermod : public Usermod {
   private:
 
-    int8_t sensorPin;           //  pin to be used by sensor
-    int    activationTimeout;   //  time after most recent sensor activation to end session and apply presets
-    int    bounceDelay;         //  cooldown time after each sensor activation is first detected, helps with sensor bounce and timing
-    bool   invertSensorHL;      //  invert HIGH/LOW for sensor
-    bool   enabled;             //  enable / disable Smack That Usermod
-    int    serialOutputLevel;   //  0: disabled, 1: data when preset applied, 2: data on smacks with preset if applied. 99: raw feed from sensor
-    int    tripwireTimeout;     //  Timeout from last Tripwire detection, if exceeded second Tripwire preset will be applied
-    int    tripwirePresets[2];  //  holds the trip and untrip presets used in Tripwire mode
+    // Settings
+    int8_t        sensorPin;           //  Pin to be used by sensor
+    uint8_t       serialOutputLevel;   //  0: disabled, 1: data when preset applied, 2: data on smacks with preset if applied. 99: raw feed from sensor
+    uint8_t       tripwirePresets[2];  //  Holds the trip and reset presets used in Tripwire mode
+    unsigned long activationTimeout;   //  Timeout from most recent sensor activation to end session and apply presets
+    unsigned long tripwireTimeout;     //  Timeout from last Tripwire detection, if exceeded second Tripwire preset will be applied
+    unsigned long bounceDelay;         //  Cooldown time after each sensor activation is first detected, helps with sensor bounce and timing
+    bool          invertSensorHL;      //  Invert HIGH/LOW for sensor
+    bool          enabled;             //  enable / disable Smack That Usermod
 
-    bool sensorIsActive      = false;  //  Holds the invert-adjusted reading from the sensor
-    bool sensorWasActive     = false;  //  Is the sensor active right now
-    bool tripped             = false;  //  Is Tripwire tripped or untripped
-    int  activationCount     = 0;      //  The number of sensor activations in this session, resets after activationTimeout
-    unsigned long lastActive = 0;      //  millis time of most recent sensor activation detected
-    int  smacksToPreset[MAX_SMACKS];   //  Stores sensor activation count per session to preset lookup
+    // Internal Use
+    uint8_t  activationCount = 0;         //  The number of sensor activations in this session, resets after activationTimeout
+    uint8_t  smacksToPreset[MAX_SMACKS];  //  Stores sensor activation count per session to preset lookup
+    unsigned long lastActive = 0;         //  millis time of most recent sensor activation detected
+    bool sensorIsActive      = false;     //  Holds the invert-adjusted reading from the sensor
+    bool sensorWasActive     = false;     //  Is the sensor active right now
+    bool tripped             = false;     //  Is Tripwire tripped or untripped
 
 
 
@@ -96,25 +98,22 @@ class smackThatUsermod : public Usermod {
       }
 
       // Check Tripwire Preset settings and apply
-      if (sensorIsActive && !tripped){
+      if (sensorIsActive && !tripped && tripwirePresets[0]){
         tripped = true;
-        if (applyPreset(tripwirePresets[0])){
-          if(serialOutputLevel > 0){
-            tripwireSerialOutput(true, tripwirePresets[0]);
-          }
+        applyPreset(tripwirePresets[0]);
+        if(serialOutputLevel > 0){
+          tripwireSerialOutput(tripwirePresets[0]);
         }
       }
 
       // Check Tripwire Reset and timeout settings and apply
       else if(!sensorIsActive && tripped && millis() - lastActive >= tripwireTimeout){
         tripped = false;
-        if(applyPreset(tripwirePresets[1])){
-          if(serialOutputLevel > 0){
-            tripwireSerialOutput(false, tripwirePresets[1]);
-          }
+        applyPreset(tripwirePresets[1]);
+        if(serialOutputLevel > 0){
+          tripwireSerialOutput(tripwirePresets[1]);
         }
       }
-
     } // end loop
 
 
@@ -130,7 +129,7 @@ class smackThatUsermod : public Usermod {
       top["Pin"]                       = sensorPin;
       top["Invert"]                    = invertSensorHL;
 
-      for (int i = 1; i <= MAX_SMACKS; i++) {
+      for (uint8_t i = 1; i <= MAX_SMACKS; i++) {
         top[getKey(i)] = smacksToPreset[i];
       }
 
@@ -154,7 +153,7 @@ class smackThatUsermod : public Usermod {
       configComplete &= getJsonValue(top["Pin"],                       sensorPin,         -1);
       configComplete &= getJsonValue(top["Invert"],                    invertSensorHL,    false);
 
-      for (int i = 1; i <= MAX_SMACKS; i++) {
+      for (uint8_t i = 1; i <= MAX_SMACKS; i++) {
         configComplete &= getJsonValue(top[getKey(i)], smacksToPreset[i], 0);
         }
 
@@ -176,11 +175,11 @@ class smackThatUsermod : public Usermod {
 
 
     // Send JSON blobs with smack and preset data out over serial if enabled
-    void serialOutput(int smacks, int preset){
-      if (serialOutputLevel >= 2 || (serialOutputLevel == 1 && preset > 0)){
+    void serialOutput(uint8_t smacks, uint8_t preset){
+      if (serialOutputLevel >= 2 || (serialOutputLevel == 1 && preset)){
         Serial.write("{\"smacks\":");
         Serial.print(smacks);
-        if (preset>0){
+        if (preset){
           Serial.write(",\"preset\":");
           Serial.print(preset);
         }
@@ -191,10 +190,10 @@ class smackThatUsermod : public Usermod {
 
 
   // Send JSON blob with Tripwire events
-  void tripwireSerialOutput(bool tripped, int preset){
+  void tripwireSerialOutput(uint8_t preset){
     Serial.write("{\"tripped\":");
     Serial.print(tripped);
-    if (preset > 0){
+    if (preset){
       Serial.write(",\"preset\":");
       Serial.print(preset);
     }
@@ -213,4 +212,3 @@ class smackThatUsermod : public Usermod {
     //void readFromJsonState(JsonObject& root){}
     //void handleOverlayDraw(){}
 };
-
